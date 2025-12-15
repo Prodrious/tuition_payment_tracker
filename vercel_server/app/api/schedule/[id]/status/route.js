@@ -1,5 +1,5 @@
-import { connectDB } from '@/lib/db';
-import { Student, Class } from '@/models';
+import { connectDB } from '../../../../../lib/db.js';
+import { Student, Class } from '../../../../../model/index.js';
 
 export async function PUT(req, { params }) {
   await connectDB();

@@ -6,7 +6,7 @@ import {
   Wallet, TrendingUp, CreditCard, FileText, BarChart2, XCircle, Archive, Loader2
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = '/api';
 
 export default function App() {
   const [view, setView] = useState('dashboard'); 
