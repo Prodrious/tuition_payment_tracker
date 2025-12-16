@@ -2,14 +2,11 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-
-  // 1. Explicitly define how to BUILD the API functions
   "builds": [
     {
-      "src": "vercel_server/app/api/*.js", // The pattern for the files to compile
+      "src": "vercel_server/app/api/*.js",
       "use": "@vercel/node@20.0.0",
       "config": {
-        // This is the correct place for 'includeFiles'
         "includeFiles": [
           "vercel_server/app/lib/**",
           "vercel_server/app/models/**"
@@ -17,16 +14,14 @@
       }
     }
   ],
-
-  // 2. Define how to ROUTE traffic to those built functions and the frontend
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/vercel_server/app/api/$1" // Map API requests to function files
+      "destination": "/vercel_server/app/api/$1"
     },
     {
       "source": "/(.*)",
-      "destination": "/index.html" // SPA fallback for frontend routes
+      "destination": "/index.html"
     }
   ]
 }
