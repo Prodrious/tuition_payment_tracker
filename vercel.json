@@ -1,5 +1,14 @@
-
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "functions": {
+    "vercel_server/app/api/**/*.js": {
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/vercel_server/app/api/$1"
+    }
+  ]
 }
