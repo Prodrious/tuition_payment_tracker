@@ -3,10 +3,8 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    // 🎯 Function Pattern: Finds all API entry files
     "vercel_server/app/api/*.js": {
       "runtime": "@vercel/node@20.0.0",
-      // 🔑 CRITICAL ADDITION: Include necessary dependency files
       "config": {
         "includeFiles": [
           "vercel_server/app/lib/**",
@@ -16,12 +14,10 @@
     }
   },
   "rewrites": [
-    // 1. API Route: Maps /api/users to /vercel_server/app/api/users.js
     {
       "source": "/api/(.*)",
       "destination": "/vercel_server/app/api/$1"
     },
-    // 2. SPA Fallback: Essential for client-side routing
     {
       "source": "/(.*)",
       "destination": "/index.html"
