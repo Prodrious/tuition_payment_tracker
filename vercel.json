@@ -3,7 +3,6 @@
   "outputDirectory": "dist",
   "functions": {
     "vercel_server/app/api/**/*.js": {
-      "runtime": "nodejs18.x"
     }
   },
   "rewrites": [
