@@ -5,7 +5,7 @@
   "builds": [
     {
       "src": "vercel_server/app/api/**/*.js",
-      "use": "@vercel/node@20.0.0",
+      "use": "@vercel/node",
       "config": {
         "includeFiles": [
           "vercel_server/app/lib/**",
