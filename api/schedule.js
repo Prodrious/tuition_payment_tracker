@@ -1,5 +1,5 @@
-import { connectDB } from '../../lib/db.js';
-import { Class } from '../../model/index.js';
+import { connectDB } from '../lib/db.js';
+import { Class } from '../model/index.js';
 
 export default async function handler(req, res) {
     try {

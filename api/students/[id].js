@@ -1,5 +1,5 @@
-import { connectDB } from '../../../lib/db.js'; // Down one more level: api/students/[id].js -> ../../../lib
-import { Student } from '../../../model/index.js';
+import { connectDB } from '../../lib/db.js'; // Down one more level: api/students/[id].js -> ../../../lib
+import { Student } from '../../model/index.js';
 
 export default async function handler(req, res) {
     const { id } = req.query;
