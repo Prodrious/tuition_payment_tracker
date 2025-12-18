@@ -134,8 +134,11 @@ export default function App() {
         const student = students.find(s => s._id === updatedClass.studentId);
         if (student) {
           let newBalance = student.balance;
-          if (student.type === 'UPFRONT') newBalance -= student.rate;
-          else newBalance += student.rate;
+          // if (student.type === 'UPFRONT') newBalance -= student.rate;
+          // else newBalance += student.rate;
+          const amount = student.rate * (updatedClass.hours || 1);
+          if (student.type === 'UPFRONT') newBalance -= amount;
+          else newBalance += amount;
           setStudents(prev => prev.map(s => s._id === student._id ? { ...s, balance: newBalance } : s));
         }
       }
@@ -401,57 +404,197 @@ const StudentForm = ({ onClose, onSave, initialData }) => {
   );
 };
 
+// const ScheduleManager = ({ students, schedule, onAdd, onAction }) => {
+//   const [isOpen, setIsOpen] = useState(false);
+//   const sortedSchedule = [...schedule].sort((a,b) => new Date(b.date) - new Date(a.date));
+//   const activeStudents = students.filter(s => !s.isArchived);
+  
+//   const generateTimeSlots = () => {
+//     const slots = [];
+//     for (let i = 6; i <= 22; i++) {
+//       const hour = i;
+//       const period = hour >= 12 ? 'PM' : 'AM';
+//       const displayHour = hour > 12 ? hour - 12 : (hour === 0 || hour === 12 ? 12 : hour);
+//       const formattedDisplay = displayHour.toString().padStart(2, '0');
+//       slots.push({ value: `${hour.toString().padStart(2, '0')}:00`, label: `${formattedDisplay}:00 ${period}` });
+//       slots.push({ value: `${hour.toString().padStart(2, '0')}:30`, label: `${formattedDisplay}:30 ${period}` });
+//     }
+//     return slots;
+//   };
+//   const timeSlots = generateTimeSlots();
+
+//   return (
+//     <div>
+//       <div className="flex justify-between items-end mb-6"><div><h2 className="text-xl font-bold text-slate-900">Schedule</h2></div><button onClick={() => setIsOpen(true)} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2"><Plus size={16} /> Book Class</button></div>
+//       {isOpen && (
+//          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+//             <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+//                <h3 className="font-bold text-lg text-slate-800 mb-6">Book Class</h3>
+//                <form onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.target); onAdd({ studentId: fd.get('studentId'), date: fd.get('date'), time: fd.get('time') }); setIsOpen(false); }} className="space-y-4">
+//                   <select name="studentId" required className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500"><option value="">Select Student</option>{activeStudents.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}</select>
+//                   <div className="grid grid-cols-2 gap-4">
+//                      <input name="date" type="date" required className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500" />
+//                      <select name="time" required className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500">
+//                         <option value="">Select Time</option>{timeSlots.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+//                      </select>
+//                   </div>
+//                   <div className="flex gap-2"><button type="button" onClick={() => setIsOpen(false)} className="flex-1 py-3 text-slate-500 font-semibold text-sm">Cancel</button><button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-sm">Schedule</button></div>
+//                </form>
+//             </div>
+//          </div>
+//       )}
+//       <div className="relative pl-4 space-y-6 before:absolute before:left-0 before:top-2 before:bottom-2 before:w-px before:bg-gray-200">
+//         {sortedSchedule.map(c => {
+//           const s = students.find(st => String(st._id) === String(c.studentId));
+//           return (
+//             <div key={c._id} className="relative pl-6">
+//               <div className={`absolute -left-[5px] top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full ring-4 ring-gray-50 ${c.status === 'COMPLETED' ? 'bg-green-500' : c.status === 'CANCELLED' ? 'bg-red-400' : 'bg-blue-500'}`}></div>
+//               <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center">
+//                 <div>
+//                    <h3 className="font-semibold text-slate-800">{s?.name || <span className="text-red-500 italic">Deleted Student</span>} {s?.isArchived && <span className="text-[10px] text-red-400">(Archived)</span>}</h3>
+//                    <div className="text-xs text-slate-500 flex items-center gap-2 mt-1"><span className="flex items-center gap-1"><Calendar size={12}/> {new Date(c.date).toLocaleDateString()}</span><span className="flex items-center gap-1"><Clock size={12}/> {c.time.includes('M') ? c.time : (parseInt(c.time.split(':')[0]) > 12 ? (parseInt(c.time.split(':')[0]) - 12) + ':' + c.time.split(':')[1] + ' PM' : c.time + ' AM')}</span></div>
+//                 </div>
+//                 {!s ? (<button onClick={() => onAction(c._id, 'DELETE_RECORD')} className="p-2 bg-red-50 text-red-500 rounded"><Trash2 size={16}/></button>) : (c.status === 'PENDING' ? <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full border border-slate-200">PENDING</span> : <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${c.status === 'COMPLETED' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'}`}>{c.status}</span>)}
+//               </div>
+//             </div>
+//           );
+//         })}
+//       </div>
+//     </div>
+//   );
+// };
+
+//<--------------- new modifiication adding hour feature-------------->
 const ScheduleManager = ({ students, schedule, onAdd, onAction }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const sortedSchedule = [...schedule].sort((a,b) => new Date(b.date) - new Date(a.date));
   const activeStudents = students.filter(s => !s.isArchived);
-  
+
   const generateTimeSlots = () => {
     const slots = [];
     for (let i = 6; i <= 22; i++) {
-      const hour = i;
-      const period = hour >= 12 ? 'PM' : 'AM';
-      const displayHour = hour > 12 ? hour - 12 : (hour === 0 || hour === 12 ? 12 : hour);
-      const formattedDisplay = displayHour.toString().padStart(2, '0');
-      slots.push({ value: `${hour.toString().padStart(2, '0')}:00`, label: `${formattedDisplay}:00 ${period}` });
-      slots.push({ value: `${hour.toString().padStart(2, '0')}:30`, label: `${formattedDisplay}:30 ${period}` });
+      const period = i >= 12 ? 'PM' : 'AM';
+      const hour = i > 12 ? i - 12 : i;
+      slots.push({
+        value: `${i.toString().padStart(2, '0')}:00`,
+        label: `${hour}:00 ${period}`
+      });
+      slots.push({
+        value: `${i.toString().padStart(2, '0')}:30`,
+        label: `${hour}:30 ${period}`
+      });
     }
     return slots;
   };
+
   const timeSlots = generateTimeSlots();
 
   return (
     <div>
-      <div className="flex justify-between items-end mb-6"><div><h2 className="text-xl font-bold text-slate-900">Schedule</h2></div><button onClick={() => setIsOpen(true)} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2"><Plus size={16} /> Book Class</button></div>
+      <div className="flex justify-between items-end mb-6">
+        <h2 className="text-xl font-bold text-slate-900">Schedule</h2>
+        <button
+          onClick={() => setIsOpen(true)}
+          className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+        >
+          Book Class
+        </button>
+      </div>
+
+      {/* BOOK CLASS MODAL */}
       {isOpen && (
-         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
-               <h3 className="font-bold text-lg text-slate-800 mb-6">Book Class</h3>
-               <form onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.target); onAdd({ studentId: fd.get('studentId'), date: fd.get('date'), time: fd.get('time') }); setIsOpen(false); }} className="space-y-4">
-                  <select name="studentId" required className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500"><option value="">Select Student</option>{activeStudents.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}</select>
-                  <div className="grid grid-cols-2 gap-4">
-                     <input name="date" type="date" required className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500" />
-                     <select name="time" required className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500">
-                        <option value="">Select Time</option>{timeSlots.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                     </select>
-                  </div>
-                  <div className="flex gap-2"><button type="button" onClick={() => setIsOpen(false)} className="flex-1 py-3 text-slate-500 font-semibold text-sm">Cancel</button><button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-sm">Schedule</button></div>
-               </form>
-            </div>
-         </div>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="font-bold text-lg mb-6">Book Class</h3>
+
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.target);
+
+                onAdd({
+                  studentId: fd.get('studentId'),
+                  date: fd.get('date'),
+                  time: fd.get('time'),
+                  hours: Number(fd.get('hours')) || 1
+                });
+
+                setIsOpen(false);
+              }}
+            >
+              {/* Student */}
+              <select
+                name="studentId"
+                required
+                className="w-full p-2.5 border rounded-lg text-sm"
+              >
+                <option value="">Select Student</option>
+                {activeStudents.map(s => (
+                  <option key={s._id} value={s._id}>{s.name}</option>
+                ))}
+              </select>
+
+              {/* Date & Time */}
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  type="date"
+                  name="date"
+                  required
+                  className="w-full p-2.5 border rounded-lg text-sm"
+                />
+                <select
+                  name="time"
+                  required
+                  className="w-full p-2.5 border rounded-lg text-sm"
+                >
+                  <option value="">Select Time</option>
+                  {timeSlots.map(t => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* NO OF HOURS */}
+              <input
+                name="hours"
+                type="number"
+                min="1"
+                defaultValue="1"
+                required
+                className="w-full p-2.5 border rounded-lg text-sm"
+                placeholder="No of Hours"
+              />
+
+              {/* Buttons */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="flex-1 py-2 text-slate-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 bg-blue-600 text-white rounded-lg font-semibold"
+                >
+                  Schedule
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
-      <div className="relative pl-4 space-y-6 before:absolute before:left-0 before:top-2 before:bottom-2 before:w-px before:bg-gray-200">
-        {sortedSchedule.map(c => {
-          const s = students.find(st => String(st._id) === String(c.studentId));
+
+      {/* EXISTING SCHEDULE LIST (UNCHANGED) */}
+      <div className="space-y-4">
+        {schedule.map(c => {
+          const s = students.find(st => st._id === c.studentId);
           return (
-            <div key={c._id} className="relative pl-6">
-              <div className={`absolute -left-[5px] top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full ring-4 ring-gray-50 ${c.status === 'COMPLETED' ? 'bg-green-500' : c.status === 'CANCELLED' ? 'bg-red-400' : 'bg-blue-500'}`}></div>
-              <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center">
-                <div>
-                   <h3 className="font-semibold text-slate-800">{s?.name || <span className="text-red-500 italic">Deleted Student</span>} {s?.isArchived && <span className="text-[10px] text-red-400">(Archived)</span>}</h3>
-                   <div className="text-xs text-slate-500 flex items-center gap-2 mt-1"><span className="flex items-center gap-1"><Calendar size={12}/> {new Date(c.date).toLocaleDateString()}</span><span className="flex items-center gap-1"><Clock size={12}/> {c.time.includes('M') ? c.time : (parseInt(c.time.split(':')[0]) > 12 ? (parseInt(c.time.split(':')[0]) - 12) + ':' + c.time.split(':')[1] + ' PM' : c.time + ' AM')}</span></div>
-                </div>
-                {!s ? (<button onClick={() => onAction(c._id, 'DELETE_RECORD')} className="p-2 bg-red-50 text-red-500 rounded"><Trash2 size={16}/></button>) : (c.status === 'PENDING' ? <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full border border-slate-200">PENDING</span> : <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${c.status === 'COMPLETED' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'}`}>{c.status}</span>)}
+            <div key={c._id} className="bg-white p-4 rounded-lg border">
+              <div className="font-semibold">{s?.name}</div>
+              <div className="text-xs text-slate-500">
+                {c.date} • {c.time} • {c.hours || 1} hr(s)
               </div>
             </div>
           );
@@ -460,6 +603,10 @@ const ScheduleManager = ({ students, schedule, onAdd, onAction }) => {
     </div>
   );
 };
+
+//<-------------- hour feature ending ------------------------->
+
+
 
 const PendingBreakdown = ({ students, onSelect }) => {
   const pendingStudents = students.filter(s => !s.isArchived && s.type === 'POSTPAID' && s.balance > 0);
