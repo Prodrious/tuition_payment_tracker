@@ -14,13 +14,13 @@ app.use(express.json());
 const connectDB = async () => {
   try {
     // Check if the Connection String exists
-    if (!process.env.MONGO_URI) {
+    if (!process.env.MONGODB_URI) {
       console.error("❌ ERROR: MONGO_URI is missing in .env file");
       process.exit(1); // Stop the server if no database
     }
 
     // Connect to MongoDB
-    const conn = await mongoose.connect(process.env.MONGO_URI);
+    const conn = await mongoose.connect(process.env.MONGODB_URI);
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
   
   } catch (error) {
