@@ -153,6 +153,24 @@ export default function App() {
   };
 
   // --- HELPERS ---
+
+  //<--------- end time calculation function ---------->
+const formatTime = (time24) => {
+  const [h, m] = time24.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return `${hour}:${m.toString().padStart(2, '0')} ${period}`;
+};
+
+const calculateEndTime = (startTime, hours) => {
+  const [h, m] = startTime.split(':').map(Number);
+  const end = new Date(0, 0, 0, h, m + hours * 60);
+  return formatTime(`${end.getHours()}:${end.getMinutes()}`);
+};
+
+//<-------------------- end --------------------------------->
+
+
   const generateStatement = (studentId) => {
     const student = students.find(s => s._id === studentId);
     if (!student) return;
@@ -160,14 +178,24 @@ export default function App() {
       .filter(c => c.studentId === studentId && c.status === 'COMPLETED')
       .sort((a,b) => new Date(a.date) - new Date(b.date));
     setCurrentInvoiceData({
-      studentName: student.name,
-      subject: student.subject,
-      rate: student.rate,
-      totalPending: student.balance,
-      history: history
-    });
+    studentName: student.name,
+    subject: student.subject,
+    rate: student.rate,
+    totalPending: student.balance,
+    history: history.map(c => ({
+    date: c.date,
+    startTime: c.time,
+    endTime: calculateEndTime(c.time, c.hours || 1),
+    hours: c.hours || 1,
+    rate: student.rate,
+    total: student.rate * (c.hours || 1)
+  }))
+});
+
     setShowInvoiceModal(true);
   };
+  
+
 
   // --- RENDER ---
   if (loading) return <div className="h-screen flex items-center justify-center bg-gray-50 text-blue-600"><Loader2 className="animate-spin" size={40}/></div>;
@@ -660,18 +688,155 @@ const NavBtn = ({ icon, label, active, onClick }) => (
   </button>
 );
 
+// const InvoiceModal = ({ data, onClose }) => {
+//   const ref = useRef(null);
+//   const downloadImage = () => { if (ref.current) toPng(ref.current, { cacheBust: true, backgroundColor: '#ffffff', pixelRatio: 2.5 }).then((dataUrl) => { const link = document.createElement('a'); link.download = `Invoice.png`; link.href = dataUrl; link.click(); }); };
+//   return (
+//     <div className="fixed inset-0 bg-slate-800/50 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4 overflow-y-auto">
+//       <div ref={ref} className="bg-white p-10 w-full max-w-sm shadow-2xl relative">
+//         <div className="flex justify-between items-start mb-8 border-b border-gray-100 pb-6"><div className="text-xl font-bold text-slate-900 flex items-center gap-2"><div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white"><FileText size={14}/></div>INVOICE</div><div className="text-right"><p className="text-xs font-bold text-slate-400 uppercase">Date</p><p className="text-sm font-semibold text-slate-700">{new Date().toLocaleDateString()}</p></div></div>
+//         <div className="mb-8"><p className="text-xs font-bold text-slate-400 uppercase mb-1">Bill To</p><h3 className="font-bold text-lg text-slate-800">{data.studentName}</h3><p className="text-sm text-slate-500">{data.subject}</p></div>
+//         <div className="mb-6"><div className="flex text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-gray-200 pb-2 mb-2"><div className="w-1/3 text-left">Date</div><div className="w-1/3 text-center">Time</div><div className="w-1/3 text-right">Amt</div></div><div className="space-y-2">{data.history.map((item, index) => (<div key={index} className="flex text-sm text-slate-600"><div className="w-1/3 font-medium">{item.date}</div><div className="w-1/3 text-center text-slate-400">{item.time}</div><div className="w-1/3 text-right">₹{data.rate}</div></div>))}</div></div>
+//         <div className="border-t-2 border-slate-800 pt-4 flex justify-between items-end"><div className="text-xs text-slate-400">Total: {data.history.length}</div><div className="text-right"><p className="text-xs font-bold text-slate-400 uppercase">Total Due</p><p className="text-3xl font-bold text-slate-900">₹{data.totalPending.toLocaleString()}</p></div></div>
+//       </div>
+//       <div className="mt-6 flex gap-3 w-full max-w-sm"><button onClick={onClose} className="flex-1 py-3 bg-white text-slate-700 font-semibold rounded-lg shadow-sm">Close</button><button onClick={downloadImage} className="flex-1 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md flex items-center justify-center gap-2"><Share2 size={18} /> Download</button></div>
+//     </div>
+//   );
+// };
+
+
+//< --------- new billing invoice ------- >
 const InvoiceModal = ({ data, onClose }) => {
   const ref = useRef(null);
-  const downloadImage = () => { if (ref.current) toPng(ref.current, { cacheBust: true, backgroundColor: '#ffffff', pixelRatio: 2.5 }).then((dataUrl) => { const link = document.createElement('a'); link.download = `Invoice.png`; link.href = dataUrl; link.click(); }); };
+
+  const formatTime = (time24) => {
+    const [h, m] = time24.split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const hour = h % 12 === 0 ? 12 : h % 12;
+    return `${hour}:${m.toString().padStart(2, '0')} ${period}`;
+  };
+
+  const getEndTime = (startTime, hours) => {
+    const [h, m] = startTime.split(':').map(Number);
+    const end = new Date(0, 0, 0, h, m + hours * 60);
+    return formatTime(`${end.getHours()}:${end.getMinutes()}`);
+  };
+
+  const invoiceTotal = data.history.reduce(
+    (sum, i) => sum + data.rate * (i.hours || 1),
+    0
+  );
+
+  const downloadImage = () => {
+    if (ref.current) {
+      toPng(ref.current, {
+        cacheBust: true,
+        backgroundColor: '#ffffff',
+        pixelRatio: 2.5
+      }).then((dataUrl) => {
+        const link = document.createElement('a');
+        link.download = `Invoice.png`;
+        link.href = dataUrl;
+        link.click();
+      });
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-slate-800/50 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4 overflow-y-auto">
-      <div ref={ref} className="bg-white p-10 w-full max-w-sm shadow-2xl relative">
-        <div className="flex justify-between items-start mb-8 border-b border-gray-100 pb-6"><div className="text-xl font-bold text-slate-900 flex items-center gap-2"><div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white"><FileText size={14}/></div>INVOICE</div><div className="text-right"><p className="text-xs font-bold text-slate-400 uppercase">Date</p><p className="text-sm font-semibold text-slate-700">{new Date().toLocaleDateString()}</p></div></div>
-        <div className="mb-8"><p className="text-xs font-bold text-slate-400 uppercase mb-1">Bill To</p><h3 className="font-bold text-lg text-slate-800">{data.studentName}</h3><p className="text-sm text-slate-500">{data.subject}</p></div>
-        <div className="mb-6"><div className="flex text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-gray-200 pb-2 mb-2"><div className="w-1/3 text-left">Date</div><div className="w-1/3 text-center">Time</div><div className="w-1/3 text-right">Amt</div></div><div className="space-y-2">{data.history.map((item, index) => (<div key={index} className="flex text-sm text-slate-600"><div className="w-1/3 font-medium">{item.date}</div><div className="w-1/3 text-center text-slate-400">{item.time}</div><div className="w-1/3 text-right">₹{data.rate}</div></div>))}</div></div>
-        <div className="border-t-2 border-slate-800 pt-4 flex justify-between items-end"><div className="text-xs text-slate-400">Total: {data.history.length}</div><div className="text-right"><p className="text-xs font-bold text-slate-400 uppercase">Total Due</p><p className="text-3xl font-bold text-slate-900">₹{data.totalPending.toLocaleString()}</p></div></div>
+      <div ref={ref} className="bg-white p-8 w-full max-w-md shadow-2xl">
+
+        {/* HEADER */}
+        <div className="flex justify-between items-start mb-6 border-b pb-4">
+          <h2 className="text-xl font-bold text-slate-900">INVOICE</h2>
+          <div className="text-right">
+            <p className="text-xs text-slate-400 font-bold uppercase">Date</p>
+            <p className="text-sm font-semibold">
+              {new Date().toLocaleDateString()}
+            </p>
+          </div>
+        </div>
+
+        {/* BILL TO */}
+        <div className="mb-6">
+          <p className="text-xs font-bold text-slate-400 uppercase">Bill To</p>
+          <p className="text-lg font-bold text-slate-800">
+            {data.studentName}
+          </p>
+          <p className="text-sm text-slate-500">{data.subject}</p>
+        </div>
+
+        {/* TABLE HEADER */}
+        <div className="grid grid-cols-6 text-[10px] font-bold text-slate-400 uppercase border-b pb-2 mb-2">
+          <div>Date</div>
+          <div className="text-center">Start</div>
+          <div className="text-center">End</div>
+          <div className="text-center">Hrs</div>
+          <div className="text-right">Rate</div>
+          <div className="text-right">Total</div>
+        </div>
+
+        {/* LINE ITEMS */}
+        <div className="space-y-2">
+          {data.history.map((item, i) => {
+            const hours = item.hours || 1;
+            const total = data.rate * hours;
+
+            return (
+              <div
+                key={i}
+                className="grid grid-cols-6 text-sm text-slate-700"
+              >
+                <div>
+                  {new Date(item.date).toLocaleDateString()}
+                </div>
+                <div className="text-center">
+                  {formatTime(item.time)}
+                </div>
+                <div className="text-center">
+                  {getEndTime(item.time, hours)}
+                </div>
+                <div className="text-center">{hours}</div>
+                <div className="text-right">₹{data.rate}</div>
+                <div className="text-right font-semibold">
+                  ₹{total}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* TOTAL */}
+        <div className="border-t-2 border-slate-800 mt-4 pt-4 flex justify-between items-end">
+          <p className="text-xs text-slate-400">
+            Total Classes: {data.history.length}
+          </p>
+          <div className="text-right">
+            <p className="text-xs font-bold text-slate-400 uppercase">
+              Total Amount
+            </p>
+            <p className="text-3xl font-bold text-slate-900">
+              ₹{invoiceTotal.toLocaleString()}
+            </p>
+          </div>
+        </div>
       </div>
-      <div className="mt-6 flex gap-3 w-full max-w-sm"><button onClick={onClose} className="flex-1 py-3 bg-white text-slate-700 font-semibold rounded-lg shadow-sm">Close</button><button onClick={downloadImage} className="flex-1 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md flex items-center justify-center gap-2"><Share2 size={18} /> Download</button></div>
+
+      {/* ACTIONS */}
+      <div className="mt-6 flex gap-3 w-full max-w-md">
+        <button
+          onClick={onClose}
+          className="flex-1 py-3 bg-white text-slate-700 font-semibold rounded-lg shadow-sm"
+        >
+          Close
+        </button>
+        <button
+          onClick={downloadImage}
+          className="flex-1 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md"
+        >
+          Download
+        </button>
+      </div>
     </div>
   );
 };

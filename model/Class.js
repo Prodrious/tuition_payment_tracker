@@ -9,7 +9,8 @@ const ClassSchema = new mongoose.Schema(
     },
     date: { type: String, required: true },
     time: { type: String, required: true },
-    hours: { type: Number,default: 1,min: 1},
+    hours: { type: Number,default: 1, min: 1
+    },
     status: {
       type: String,
       enum: ['PENDING', 'COMPLETED', 'CANCELLED'],
