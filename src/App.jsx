@@ -710,17 +710,46 @@ const InvoiceModal = ({ data, onClose }) => {
   const ref = useRef(null);
 
   const formatTime = (time24) => {
-    const [h, m] = time24.split(':').map(Number);
-    const period = h >= 12 ? 'PM' : 'AM';
-    const hour = h % 12 === 0 ? 12 : h % 12;
-    return `${hour}:${m.toString().padStart(2, '0')} ${period}`;
-  };
+  if (!time24 || typeof time24 !== 'string') return '--';
+
+  // If already AM/PM, return as-is
+  if (time24.includes('AM') || time24.includes('PM')) {
+    return time24;
+  }
+
+  const parts = time24.split(':');
+  if (parts.length !== 2) return '--';
+
+  const [h, m] = parts.map(Number);
+  if (isNaN(h) || isNaN(m)) return '--';
+
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hour = h % 12 === 0 ? 12 : h % 12;
+
+  return `${hour}:${m.toString().padStart(2, '0')} ${period}`;
+};
+
 
   const getEndTime = (startTime, hours) => {
-    const [h, m] = startTime.split(':').map(Number);
-    const end = new Date(0, 0, 0, h, m + hours * 60);
-    return formatTime(`${end.getHours()}:${end.getMinutes()}`);
-  };
+  if (!startTime) return '--';
+
+  const safeHours = Number(hours) || 1;
+
+  // If startTime is AM/PM, skip calculation
+  if (startTime.includes('AM') || startTime.includes('PM')) {
+    return '--';
+  }
+
+  const parts = startTime.split(':');
+  if (parts.length !== 2) return '--';
+
+  const [h, m] = parts.map(Number);
+  if (isNaN(h) || isNaN(m)) return '--';
+
+  const end = new Date(0, 0, 0, h, m + safeHours * 60);
+  return formatTime(`${end.getHours()}:${end.getMinutes()}`);
+};
+
 
   const invoiceTotal = data.history.reduce(
     (sum, i) => sum + data.rate * (i.hours || 1),
@@ -778,32 +807,23 @@ const InvoiceModal = ({ data, onClose }) => {
 
         {/* LINE ITEMS */}
         <div className="space-y-2">
-          {data.history.map((item, i) => {
-            const hours = item.hours || 1;
-            const total = data.rate * hours;
+        {data.history.map((item, i) => {
+  const hours = Number(item.hours) || 1;
+  const rate = Number(data.rate) || 0;
+  const total = rate * hours;
 
-            return (
-              <div
-                key={i}
-                className="grid grid-cols-6 text-sm text-slate-700"
-              >
-                <div>
-                  {new Date(item.date).toLocaleDateString()}
-                </div>
-                <div className="text-center">
-                  {formatTime(item.time)}
-                </div>
-                <div className="text-center">
-                  {getEndTime(item.time, hours)}
-                </div>
-                <div className="text-center">{hours}</div>
-                <div className="text-right">₹{data.rate}</div>
-                <div className="text-right font-semibold">
-                  ₹{total}
-                </div>
-              </div>
-            );
-          })}
+  return (
+    <div key={i} className="grid grid-cols-6 text-sm text-slate-700">
+      <div>{item.date ? new Date(item.date).toLocaleDateString() : '--'}</div>
+      <div className="text-center">{formatTime(item.time)}</div>
+      <div className="text-center">{getEndTime(item.time, hours)}</div>
+      <div className="text-center">{hours}</div>
+      <div className="text-right">₹{rate}</div>
+      <div className="text-right font-semibold">₹{total}</div>
+    </div>
+  );
+})}
+
         </div>
 
         {/* TOTAL */}
