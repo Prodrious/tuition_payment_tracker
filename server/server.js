@@ -138,8 +138,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const Student = require('./student'); // Assuming student.js is in the same folder
-const Class = require('./class');
+const { Student, Class } = require('./models');
 
 const app = express();
 
@@ -271,33 +270,27 @@ app.get('/api/schedule', async (req, res) => {
 // 7. Add class (WITH HOURS)
 app.post('/api/schedule', async (req, res) => {
   try {
-    console.log('📦 Incoming schedule payload:', req.body);
-
     const { studentId, date, time, endTime, hours } = req.body;
 
-    if (!studentId || !date || !time || !endTime || hours == null) {
+    // Validation
+    if (!studentId || !date || !time || !endTime || !hours) {
       return res.status(400).json({
-        error: 'studentId, date, time, endTime and hours are required',
-        received: req.body
+        error: 'studentId, date, time, endTime and hours are required'
       });
     }
 
     const newClass = new Class({
       studentId,
       date,
-      time,
-      endTime,
-      hours,
+      time,        // start time
+      endTime,     // ✅ store end time
+      hours,       // ✅ already calculated
       status: 'PENDING'
     });
 
     await newClass.save();
-
-    console.log('✅ Class saved:', newClass);
     res.json(newClass);
-
   } catch (err) {
-    console.error('❌ Schedule save failed:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -362,3 +355,4 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`🚀 Server running on port ${PORT}`)
 );
+

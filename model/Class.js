@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const ClassSchema = new mongoose.Schema(
   {
@@ -12,11 +12,11 @@ const ClassSchema = new mongoose.Schema(
       required: true
     },
     time: {
-      type: String,
+      type: String, // start time
       required: true
     },
     endTime: {
-      type: String,
+      type: String, // end time
       required: true
     },
     hours: {
@@ -33,4 +33,5 @@ const ClassSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Class', ClassSchema);
+export default mongoose.models.Class ||
+  mongoose.model('Class', ClassSchema);

@@ -1,4 +1,5 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+
 const StudentSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -12,4 +13,6 @@ const StudentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Student', StudentSchema);
+export default mongoose.models.Student ||
+  mongoose.model('Student', StudentSchema);
+
