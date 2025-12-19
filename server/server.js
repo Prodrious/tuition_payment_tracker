@@ -138,7 +138,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const { Student, Class } = require('./model');
+const Student = require('./student'); // Assuming student.js is in the same folder
+const Class = require('./class');
 
 const app = express();
 
