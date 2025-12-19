@@ -780,7 +780,7 @@ const InvoiceModal = ({ data, onClose }) => {
             const total = rate * hours;
 
             return (
-              <div key={i} className="grid grid-cols-12 text-sm text-slate-700">
+              <div key={i} className="grid grid-cols-6 text-xs text-slate-700">
                 <div>{item.date ? new Date(item.date).toLocaleDateString() : '--'}</div>
                 <div className="text-center">{formatTime(item.startTime)}</div>
                 <div className="text-center">{formatTime(item.endTime)}</div>
