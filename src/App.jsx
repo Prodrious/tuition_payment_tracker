@@ -763,7 +763,7 @@ const InvoiceModal = ({ data, onClose }) => {
         </div>
 
         {/* TABLE HEADER */}
-        <div className="grid grid-cols-12 text-[10px] font-bold text-slate-400 uppercase border-b pb-2 mb-2">
+        <div className="grid grid-cols-6 text-[10px] font-bold text-slate-400 uppercase border-b pb-2 mb-2">
           <div>Date</div>
           <div className="text-center">Start</div>
           <div className="text-center">End</div>
@@ -780,7 +780,7 @@ const InvoiceModal = ({ data, onClose }) => {
             const total = rate * hours;
 
             return (
-              <div key={i} className="grid grid-cols-6 text-sm text-slate-700">
+              <div key={i} className="grid grid-cols-12 text-sm text-slate-700">
                 <div>{item.date ? new Date(item.date).toLocaleDateString() : '--'}</div>
                 <div className="text-center">{formatTime(item.startTime)}</div>
                 <div className="text-center">{formatTime(item.endTime)}</div>
