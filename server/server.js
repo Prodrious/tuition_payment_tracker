@@ -149,10 +149,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use((req, res, next) => {
-  res.setHeader('Cache-Control', 'no-store');
-  next();
-});
+
 
 
 /* =====================
@@ -273,27 +270,33 @@ app.get('/api/schedule', async (req, res) => {
 // 7. Add class (WITH HOURS)
 app.post('/api/schedule', async (req, res) => {
   try {
+    console.log('📦 Incoming schedule payload:', req.body);
+
     const { studentId, date, time, endTime, hours } = req.body;
 
-    // Validation
-    if (!studentId || !date || !time || !endTime || !hours) {
+    if (!studentId || !date || !time || !endTime || hours == null) {
       return res.status(400).json({
-        error: 'studentId, date, time, endTime and hours are required'
+        error: 'studentId, date, time, endTime and hours are required',
+        received: req.body
       });
     }
 
     const newClass = new Class({
       studentId,
       date,
-      time,        // start time
-      endTime,     // ✅ store end time
-      hours,       // ✅ already calculated
+      time,
+      endTime,
+      hours,
       status: 'PENDING'
     });
 
     await newClass.save();
+
+    console.log('✅ Class saved:', newClass);
     res.json(newClass);
+
   } catch (err) {
+    console.error('❌ Schedule save failed:', err);
     res.status(500).json({ error: err.message });
   }
 });
