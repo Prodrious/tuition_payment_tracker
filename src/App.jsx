@@ -8,6 +8,30 @@ import {
 
 const API_BASE = '/api';
 
+//<--------- end time calculation function ---------->
+  const formatTime = (time24) => {
+    const [h, m] = time24.split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const hour = h % 12 === 0 ? 12 : h % 12;
+    return `${hour}:${m.toString().padStart(2, '0')} ${period}`;
+  };
+
+  //<-------------------- end --------------------------------->
+  const calculateHours = (startTime, endTime) => {
+    if (!startTime || !endTime) return 0;
+
+    const [sh, sm] = startTime.split(':').map(Number);
+    const [eh, em] = endTime.split(':').map(Number);
+
+    const startMinutes = sh * 60 + sm;
+    const endMinutes = eh * 60 + em;
+
+    if (endMinutes <= startMinutes) return 0;
+
+    return (endMinutes - startMinutes) / 60;
+  };
+
+
 export default function App() {
   const [view, setView] = useState('dashboard');
   const [selectedStudentId, setSelectedStudentId] = useState(null);
@@ -154,29 +178,7 @@ export default function App() {
 
   // --- HELPERS ---
 
-  //<--------- end time calculation function ---------->
-  const formatTime = (time24) => {
-    const [h, m] = time24.split(':').map(Number);
-    const period = h >= 12 ? 'PM' : 'AM';
-    const hour = h % 12 === 0 ? 12 : h % 12;
-    return `${hour}:${m.toString().padStart(2, '0')} ${period}`;
-  };
-
-  //<-------------------- end --------------------------------->
-  const calculateHours = (startTime, endTime) => {
-    if (!startTime || !endTime) return 0;
-
-    const [sh, sm] = startTime.split(':').map(Number);
-    const [eh, em] = endTime.split(':').map(Number);
-
-    const startMinutes = sh * 60 + sm;
-    const endMinutes = eh * 60 + em;
-
-    if (endMinutes <= startMinutes) return 0;
-
-    return (endMinutes - startMinutes) / 60;
-  };
-
+  
 
 
 
