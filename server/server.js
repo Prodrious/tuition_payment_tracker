@@ -22,7 +22,7 @@
 //     // Connect to MongoDB
 //     const conn = await mongoose.connect(process.env.MONGODB_URI);
 //     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-  
+
 //   } catch (error) {
 //     console.error(`❌ Error: ${error.message}`);
 //     process.exit(1);
@@ -101,7 +101,7 @@
 //   try {
 //     const { status } = req.body;
 //     const cls = await Class.findById(req.params.id);
-    
+
 //     if (status === 'COMPLETED' && cls.status !== 'COMPLETED') {
 //       const student = await Student.findById(cls.studentId);
 //       if (student) {
@@ -111,7 +111,7 @@
 //         await Student.findByIdAndUpdate(cls.studentId, { balance: newBalance });
 //       }
 //     }
-    
+
 //     cls.status = status;
 //     await cls.save();
 //     res.json(cls);
@@ -267,13 +267,21 @@ app.get('/api/schedule', async (req, res) => {
 // 7. Add class (WITH HOURS)
 app.post('/api/schedule', async (req, res) => {
   try {
-    const { studentId, date, time, hours } = req.body;
+    const { studentId, date, time, endTime, hours } = req.body;
+
+    // Validation
+    if (!studentId || !date || !time || !endTime || !hours) {
+      return res.status(400).json({
+        error: 'studentId, date, time, endTime and hours are required'
+      });
+    }
 
     const newClass = new Class({
       studentId,
       date,
-      time,
-      hours: Number(hours) || 1, // ✅ DEFAULT = 1
+      time,        // start time
+      endTime,     // ✅ store end time
+      hours,       // ✅ already calculated
       status: 'PENDING'
     });
 
@@ -283,6 +291,7 @@ app.post('/api/schedule', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // 8. Update class status (CORRECT BALANCE LOGIC)
 app.put('/api/schedule/:id/status', async (req, res) => {

@@ -89,13 +89,17 @@ const ClassSchema = new mongoose.Schema({
     required: true
   },
   time: {
-    type: String, // HH:mm
+    type: String, // Start time (HH:mm)
+    required: true
+  },
+  endTime: {
+    type: String, // End time (HH:mm)
     required: true
   },
   hours: {
     type: Number,
-    default: 1,
-    min: 1 // ✅ ensures at least 1 hour
+    required: true,
+    min: 0.25 // supports 15 / 30 / 45 min if needed
   },
   status: {
     type: String,
@@ -107,6 +111,7 @@ const ClassSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
 
 /* =====================
    MODELS
