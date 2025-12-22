@@ -99,7 +99,7 @@ export default function App() {
       const newBalance = (parseFloat(student.balance) || 0) + parseFloat(amount);
 
       // 1. Update Database
-      const res = await fetch(`${API_BASE}/students/${studentId}`, {
+      const res = await fetch(`${API_BASE}/students/${studentId}/topup`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ balance: newBalance })
@@ -759,9 +759,11 @@ const PendingBreakdown = ({ students, onSelect }) => {
 const StudentDetailView = ({ student, schedule, onGenerateReport, onClearDues, onDelete, onEdit }) => {
   if (!student) return <div>Student not found</div>;
   
-  const history = schedule.filter(c => String(c.studentId) === String(student._id) && c.status === 'COMPLETED').sort((a, b) => new Date(b.date) - new Date(a.date));
-  
-  // Sort payments by date (newest first)
+  const history = schedule
+    .filter(c => String(c.studentId) === String(student._id) && c.status === 'COMPLETED')
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  // 👇 Get payments list, default to empty array if undefined
   const payments = student.payments ? [...student.payments].sort((a,b) => new Date(b.date) - new Date(a.date)) : [];
 
   return (
@@ -775,8 +777,6 @@ const StudentDetailView = ({ student, schedule, onGenerateReport, onClearDues, o
         {/* BALANCE BOX */}
         <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Current Balance</p>
-          
-          {/* COLOR LOGIC: Green if positive/zero, Red if negative */}
           <p className={`text-3xl font-bold mt-1 ${student.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             {student.balance < 0 ? '-' : ''}₹{Math.abs(student.balance).toLocaleString()}
           </p>
@@ -785,15 +785,18 @@ const StudentDetailView = ({ student, schedule, onGenerateReport, onClearDues, o
           </p>
         </div>
 
-        {/* PAYMENT HISTORY (TOP-UPS) */}
+        {/* 👇 PAYMENT HISTORY SECTION 👇 */}
         {student.type === 'UPFRONT' && (
           <div className="mt-4 text-left">
             <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Payment History</h4>
             <div className="max-h-32 overflow-y-auto space-y-2 border-t border-gray-100 pt-2">
               <div className="flex justify-between text-xs text-slate-500">
                  <span>Initial Deposit</span>
-                 <span className="font-semibold text-green-600">+₹{student.initialBalance}</span>
+                 <span className="font-semibold text-green-600">+₹{student.initialBalance || 0}</span>
               </div>
+              
+              {payments.length === 0 && <div className="text-xs text-slate-300 italic text-center py-1">No top-ups yet</div>}
+
               {payments.map((p, i) => (
                 <div key={i} className="flex justify-between text-xs text-slate-600">
                   <span>{new Date(p.date).toLocaleDateString()}</span>
@@ -803,6 +806,7 @@ const StudentDetailView = ({ student, schedule, onGenerateReport, onClearDues, o
             </div>
           </div>
         )}
+        {/* ------------------------------- */}
 
         <div className="grid grid-cols-2 gap-3 mt-6">
           {student.type === 'POSTPAID' && student.balance > 0 && <button onClick={() => onClearDues(student._id)} className="py-2.5 text-sm font-semibold border border-gray-300 rounded-lg text-slate-700 hover:bg-gray-50 transition">Mark Paid</button>}
