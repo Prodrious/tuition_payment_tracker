@@ -212,6 +212,9 @@ app.delete('/api/schedule/:id', async (req, res) => {
   }
 });
 
+// server.js
+
+// 👇 ADD THIS EXACT BLOCK 👇
 app.put('/api/students/:id/topup', async (req, res) => {
   try {
     const { amount } = req.body;
@@ -224,22 +227,23 @@ app.put('/api/students/:id/topup', async (req, res) => {
     const student = await Student.findByIdAndUpdate(
       req.params.id,
       {
-        $inc: { balance: value },         // 1. Increases current balance
-        $push: {                          // 2. Adds to history list
-          payments: {
-            amount: value,
-            date: new Date()
-          }
+        $inc: { balance: value },
+        $push: { 
+          payments: { amount: value, date: new Date() } 
         }
       },
       { new: true }
     );
 
+    if (!student) return res.status(404).json({ error: "Student not found" });
+
     res.json(student);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
+// -----------------------------
 
 
 
