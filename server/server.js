@@ -212,6 +212,38 @@ app.delete('/api/schedule/:id', async (req, res) => {
   }
 });
 
+app.put('/api/students/:id/topup', async (req, res) => {
+  try {
+    const { amount } = req.body;
+    const value = parseFloat(amount);
+
+    if (isNaN(value) || value <= 0) {
+      return res.status(400).json({ error: "Invalid amount" });
+    }
+
+    const student = await Student.findByIdAndUpdate(
+      req.params.id,
+      {
+        $inc: { balance: value },         // 1. Increases current balance
+        $push: {                          // 2. Adds to history list
+          payments: {
+            amount: value,
+            date: new Date()
+          }
+        }
+      },
+      { new: true }
+    );
+
+    res.json(student);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+
 /* =====================
    SERVER START
 ===================== */

@@ -311,24 +311,31 @@ export default function App() {
 
 // --- SUB COMPONENTS ---
 
-const Dashboard = ({ students, schedule, onAction, onViewPending, onOpenEarnings, onOpenTopUp }) => { // 👈 Add prop
+const Dashboard = ({ students, schedule, onAction, onViewPending, onOpenEarnings, onOpenTopUp }) => {
   const today = new Date().toISOString().split('T')[0];
 
-  const upfrontCollected = students.filter(s => s.type === 'UPFRONT').reduce((acc, s) => acc + (parseFloat(s.initialBalance) || 0), 0);
-  
-  // Calculate current available balance for Upfront students (Total funds holding)
-  const currentUpfrontHoldings = students.filter(s => s.type === 'UPFRONT').reduce((acc, s) => acc + (parseFloat(s.balance) || 0), 0);
+  // 1. CALCULATE TOTAL CASH RECEIVED (Upfront Initial + All Top-ups)
+  const upfrontCollected = students
+    .filter(s => s.type === 'UPFRONT')
+    .reduce((acc, s) => {
+      const initial = parseFloat(s.initialBalance) || 0;
+      // Add all top-up history if exists
+      const topUps = s.payments ? s.payments.reduce((sum, p) => sum + (p.amount || 0), 0) : 0;
+      return acc + initial + topUps;
+    }, 0);
 
   const postpaidEarned = schedule.filter(c => c.status === 'COMPLETED').reduce((acc, c) => {
     const s = students.find(st => st._id === c.studentId);
     if (s && s.type === 'POSTPAID') return acc + parseFloat(s.rate);
     return acc;
   }, 0);
-  
   const totalEarnings = upfrontCollected + postpaidEarned;
+  // Pending calculation (Postpaid students with negative balance meaning they owe money)
+  // Note: Depending on your logic, Postpaid usually goes negative if we track "Balance". 
+  // If you track Postpaid as positive debt, keep your existing logic. 
+  // Assuming 'balance' for postpaid is stored as positive debt based on your previous code:
   const pendingAmount = students.filter(s => !s.isArchived && s.type === 'POSTPAID' && s.balance > 0).reduce((acc, s) => acc + parseFloat(s.balance), 0);
   const pendingClasses = schedule.filter(c => c.status === 'PENDING').sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
-
 //   return (
 //     <div className="space-y-8">
 //       <section>
@@ -396,10 +403,9 @@ return (
       <section>
         <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Financial Stats</h2>
         
-        {/* Total Earnings Card */}
+        {/* Total Earnings */}
         <div onClick={onOpenEarnings} className="bg-slate-900 rounded-xl p-5 text-white shadow-lg mb-4 flex justify-between items-center cursor-pointer hover:bg-slate-800 transition active:scale-[0.98]">
-           {/* ... same content ... */}
-           <div>
+          <div>
             <p className="text-slate-400 text-xs font-bold uppercase mb-1">Total Lifetime Earnings</p>
             <h2 className="text-3xl font-bold">₹{totalEarnings.toLocaleString()}</h2>
             <div className="flex items-center gap-1 text-[10px] text-blue-300 mt-2 font-medium bg-slate-800 py-1 px-2 rounded-lg w-fit"><BarChart2 size={12} /> View Monthly Chart</div>
@@ -409,24 +415,15 @@ return (
 
         <div className="grid grid-cols-2 gap-3">
           
-          {/* 👇 UPFRONT CARD - NOW CLICKABLE */}
-          <div 
-            onClick={onOpenTopUp} 
-            className="bg-white p-4 rounded-xl border border-purple-100 shadow-sm cursor-pointer hover:bg-purple-50 transition active:scale-[0.98] group relative overflow-hidden"
-          >
-             {/* Small indicator to show it's clickable */}
-             <div className="absolute top-2 right-2 text-purple-200 group-hover:text-purple-500 transition-colors">
-                <Plus size={16} />
-             </div>
-
+          {/* UPFRONT CARD (Clickable) */}
+          <div onClick={onOpenTopUp} className="bg-white p-4 rounded-xl border border-purple-100 shadow-sm cursor-pointer hover:bg-purple-50 transition active:scale-[0.98] group relative">
+            <div className="absolute top-2 right-2 text-purple-200 group-hover:text-purple-500 transition-colors"><Plus size={16} /></div>
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded bg-purple-50 text-purple-600 flex items-center justify-center group-hover:bg-white transition-colors">
-                <Wallet size={14} />
-              </div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Upfront Balance</span>
+              <div className="w-6 h-6 rounded bg-purple-50 text-purple-600 flex items-center justify-center"><Wallet size={14} /></div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Total Collected</span>
             </div>
-            {/* Displaying Current Holding Balance instead of initial collected for better context, or keep upfrontCollected if you prefer */}
-            <div className="text-lg font-bold text-slate-800">₹{currentUpfrontHoldings.toLocaleString()}</div>
+            {/* Shows TOTAL RECEIVED (No deductions) */}
+            <div className="text-lg font-bold text-slate-800">₹{upfrontCollected.toLocaleString()}</div>
             <div className="text-[10px] text-purple-400 mt-1 font-medium">Click to Add Funds</div>
           </div>
 
@@ -441,9 +438,9 @@ return (
           </div>
         </div>
       </section>
-
-      {/* ... Timeline Section ... */}
-      <section>
+      
+      {/* ... Timeline section remains the same ... */}
+       <section>
         <div className="flex items-center gap-2 mb-4"><h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Timeline</h2>{pendingClasses.length > 0 && <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{pendingClasses.length}</span>}</div>
         {pendingClasses.length === 0 ? (
           <div className="bg-white rounded-xl border border-dashed border-gray-300 p-8 text-center"><div className="inline-block p-3 rounded-full bg-gray-50 mb-3"><Check size={20} className="text-gray-400" /></div><p className="text-slate-500 text-sm font-medium">No pending classes.</p></div>
@@ -761,7 +758,12 @@ const PendingBreakdown = ({ students, onSelect }) => {
 
 const StudentDetailView = ({ student, schedule, onGenerateReport, onClearDues, onDelete, onEdit }) => {
   if (!student) return <div>Student not found</div>;
+  
   const history = schedule.filter(c => String(c.studentId) === String(student._id) && c.status === 'COMPLETED').sort((a, b) => new Date(b.date) - new Date(a.date));
+  
+  // Sort payments by date (newest first)
+  const payments = student.payments ? [...student.payments].sort((a,b) => new Date(b.date) - new Date(a.date)) : [];
+
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm text-center relative">
@@ -769,18 +771,49 @@ const StudentDetailView = ({ student, schedule, onGenerateReport, onClearDues, o
         <div className="w-20 h-20 bg-slate-100 rounded-full mx-auto flex items-center justify-center text-2xl font-bold text-slate-400 mb-4">{student.name.substring(0, 2).toUpperCase()}</div>
         <h2 className="text-2xl font-bold text-slate-900">{student.name} {student.isArchived && <span className="text-sm text-red-500">(Archived)</span>}</h2>
         <p className="text-slate-500 text-sm font-medium mt-1">{student.subject} • ₹{student.rate}/hr</p>
+        
+        {/* BALANCE BOX */}
         <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Balance</p>
-          <p className={`text-3xl font-bold mt-1 ${student.balance > 0 ? 'text-orange-600' : 'text-slate-700'}`}>₹{Math.abs(student.balance).toLocaleString()}</p>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Current Balance</p>
+          
+          {/* COLOR LOGIC: Green if positive/zero, Red if negative */}
+          <p className={`text-3xl font-bold mt-1 ${student.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {student.balance < 0 ? '-' : ''}₹{Math.abs(student.balance).toLocaleString()}
+          </p>
+          <p className="text-[10px] text-slate-400 mt-1">
+            {student.balance >= 0 ? 'Advance Available' : 'Payment Due'}
+          </p>
         </div>
+
+        {/* PAYMENT HISTORY (TOP-UPS) */}
+        {student.type === 'UPFRONT' && (
+          <div className="mt-4 text-left">
+            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Payment History</h4>
+            <div className="max-h-32 overflow-y-auto space-y-2 border-t border-gray-100 pt-2">
+              <div className="flex justify-between text-xs text-slate-500">
+                 <span>Initial Deposit</span>
+                 <span className="font-semibold text-green-600">+₹{student.initialBalance}</span>
+              </div>
+              {payments.map((p, i) => (
+                <div key={i} className="flex justify-between text-xs text-slate-600">
+                  <span>{new Date(p.date).toLocaleDateString()}</span>
+                  <span className="font-semibold text-green-600">+₹{p.amount}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3 mt-6">
           {student.type === 'POSTPAID' && student.balance > 0 && <button onClick={() => onClearDues(student._id)} className="py-2.5 text-sm font-semibold border border-gray-300 rounded-lg text-slate-700 hover:bg-gray-50 transition">Mark Paid</button>}
           <button onClick={() => onGenerateReport(student._id)} className="col-span-full py-2.5 text-sm font-semibold bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition flex items-center justify-center gap-2"><Share2 size={16} /> Invoice</button>
         </div>
       </div>
+      
+      {/* CLASS HISTORY */}
       <div>
-        <div className="flex justify-between items-center mb-4 px-1"><h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">History</h3><button onClick={() => onDelete(student._id)} className="text-xs text-red-500 font-medium hover:underline flex items-center gap-1"><Trash2 size={12} /> Remove</button></div>
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-100">{history.length === 0 ? <p className="text-slate-400 text-sm text-center py-6">No classes.</p> : history.map((c) => (<div key={c._id} className="flex justify-between items-center p-4"><div><div className="text-sm font-semibold text-slate-700">{new Date(c.date).toLocaleDateString()}</div><div className="text-xs text-slate-400">{c.time}</div></div><div className="font-semibold text-green-600 text-sm">+₹{student.rate}</div></div>))}</div>
+        <div className="flex justify-between items-center mb-4 px-1"><h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Class History</h3><button onClick={() => onDelete(student._id)} className="text-xs text-red-500 font-medium hover:underline flex items-center gap-1"><Trash2 size={12} /> Remove</button></div>
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-100">{history.length === 0 ? <p className="text-slate-400 text-sm text-center py-6">No classes.</p> : history.map((c) => (<div key={c._id} className="flex justify-between items-center p-4"><div><div className="text-sm font-semibold text-slate-700">{new Date(c.date).toLocaleDateString()}</div><div className="text-xs text-slate-400">{c.time}</div></div><div className="font-semibold text-red-500 text-sm">-₹{student.rate * (c.hours || 1)}</div></div>))}</div>
       </div>
     </div>
   );
@@ -812,48 +845,6 @@ const NavBtn = ({ icon, label, active, onClick }) => (
 //< --------- new billing invoice ------- >
 const InvoiceModal = ({ data, onClose }) => {
   const ref = useRef(null);
-
-  // const formatTime = (time24) => {
-  //   if (!time24 || typeof time24 !== 'string') return '--';
-
-  //   // If already AM/PM, return as-is
-  //   if (time24.includes('AM') || time24.includes('PM')) {
-  //     return time24;
-  //   }
-
-  //   const parts = time24.split(':');
-  //   if (parts.length !== 2) return '--';
-
-  //   const [h, m] = parts.map(Number);
-  //   if (isNaN(h) || isNaN(m)) return '--';
-
-  //   const period = h >= 12 ? 'PM' : 'AM';
-  //   const hour = h % 12 === 0 ? 12 : h % 12;
-
-  //   return `${hour}:${m.toString().padStart(2, '0')} ${period}`;
-  // };
-
-
-  // const getEndTime = (startTime, hours) => {
-  //   if (!startTime) return '--';
-
-  //   const safeHours = Number(hours) || 1;
-
-  //   // If startTime is AM/PM, skip calculation
-  //   if (startTime.includes('AM') || startTime.includes('PM')) {
-  //     return '--';
-  //   }
-
-  //   const parts = startTime.split(':');
-  //   if (parts.length !== 2) return '--';
-
-  //   const [h, m] = parts.map(Number);
-  //   if (isNaN(h) || isNaN(m)) return '--';
-
-  //   const end = new Date(0, 0, 0, h, m + safeHours * 60);
-  //   return formatTime(`${end.getHours()}:${end.getMinutes()}`);
-  // };
-
 
   const invoiceTotal = data.history.reduce(
     (sum, i) => sum + data.rate * (i.hours || 1),
