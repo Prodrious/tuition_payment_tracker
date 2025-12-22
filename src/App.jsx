@@ -961,91 +961,66 @@ const InvoiceModal = ({ data, onClose }) => {
 };
 
 const TopUpModal = ({ students, onClose, onSave }) => {
-  // Only show students who are UPFRONT type
+  // Filter only active, upfront students
   const upfrontStudents = students.filter(s => s.type === 'UPFRONT' && !s.isArchived);
+  
   const [selectedId, setSelectedId] = useState('');
   const [amount, setAmount] = useState('');
 
-  const selectedStudent = students.find(s => s._id === selectedId);
-
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (selectedId && amount) {
-      onSave(selectedId, amount);
+    
+    // 🛑 PREVENT SUBMISSION IF NO ID
+    if (!selectedId) {
+      alert("Please select a student first");
+      return;
     }
+    if (!amount || amount <= 0) {
+      alert("Please enter a valid amount");
+      return;
+    }
+
+    onSave(selectedId, amount);
   };
 
   return (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
-            <Wallet size={20} />
-          </div>
-          <div>
-            <h3 className="font-bold text-lg text-slate-900">Add Funds</h3>
-            <p className="text-xs text-slate-500">Update Upfront Balance</p>
-          </div>
-        </div>
-        
+        <h3 className="font-bold text-lg mb-4">Add Funds</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           
-          {/* Student Selector */}
+          {/* STUDENT SELECTOR */}
           <div>
-            <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Select Student</label>
+            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Student</label>
             <select 
               value={selectedId} 
               onChange={(e) => setSelectedId(e.target.value)} 
               required 
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-purple-500 transition-colors"
+              className="w-full p-3 border rounded-xl"
             >
-              <option value="">-- Choose Student --</option>
-              {upfrontStudents.length === 0 && <option disabled>No Upfront Students Found</option>}
+              <option value="">-- Select Student --</option>
               {upfrontStudents.map(s => (
-                <option key={s._id} value={s._id}>{s.name} (Bal: ₹{s.balance})</option>
+                <option key={s._id} value={s._id}>{s.name}</option>
               ))}
             </select>
           </div>
 
-          {/* Amount Input */}
+          {/* AMOUNT INPUT */}
           <div>
-            <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Amount to Add</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
-              <input 
-                type="number" 
-                value={amount} 
-                onChange={(e) => setAmount(e.target.value)} 
-                placeholder="0.00" 
-                required 
-                min="1"
-                className="w-full pl-8 p-3 bg-gray-50 border border-gray-200 rounded-xl text-lg font-semibold outline-none focus:border-purple-500 transition-colors" 
-              />
-            </div>
+            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Amount</label>
+            <input 
+              type="number" 
+              value={amount} 
+              onChange={(e) => setAmount(e.target.value)} 
+              placeholder="0" 
+              required 
+              className="w-full p-3 border rounded-xl" 
+            />
           </div>
 
-          {/* Preview New Balance */}
-          {selectedStudent && amount && (
-             <div className="bg-purple-50 p-3 rounded-lg flex justify-between items-center text-sm border border-purple-100">
-                <span className="text-purple-700">New Balance:</span>
-                <span className="font-bold text-purple-800">₹{(parseFloat(selectedStudent.balance || 0) + parseFloat(amount)).toLocaleString()}</span>
-             </div>
-          )}
-
-          <div className="flex gap-2 mt-6">
-            <button 
-              type="button" 
-              onClick={onClose} 
-              className="flex-1 py-3 text-slate-500 font-semibold text-sm hover:bg-gray-50 rounded-lg transition"
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit" 
-              className="flex-1 py-3 bg-slate-900 text-white font-semibold rounded-lg shadow-md hover:bg-slate-800 transition"
-            >
-              Add Funds
-            </button>
+          <div className="flex gap-2">
+            <button type="button" onClick={onClose} className="flex-1 py-3 text-slate-500">Cancel</button>
+            <button type="submit" className="flex-1 py-3 bg-blue-600 text-white rounded-lg">Save</button>
           </div>
         </form>
       </div>
