@@ -50,7 +50,7 @@ export default function App() {
   const [showStudentForm, setShowStudentForm] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [showEarningsModal, setShowEarningsModal] = useState(false);
-
+  const [showTopUpModal, setShowTopUpModal] = useState(false); 
   // --- FETCH DATA (Database Sync) ---
   useEffect(() => {
     const fetchData = async () => {
@@ -69,7 +69,11 @@ export default function App() {
     fetchData();
   }, []);
 
+
   // --- DATABASE ACTIONS ---
+
+  
+
 
   // 1. ADD STUDENT (DB)
   const addStudent = async (studentData) => {
@@ -83,6 +87,37 @@ export default function App() {
       setStudents(prev => [...prev, newStudent]); // Update UI
       setShowStudentForm(false);
     } catch (err) { alert("Failed to add student to DB"); }
+  };
+
+  // UPDATING THE TOPUP AMOUNT
+  const handleTopUp = async (studentId, amount) => {
+    try {
+      const student = students.find(s => s._id === studentId);
+      if (!student) return;
+
+      // Calculate new balance (Current Balance + New Amount)
+      const newBalance = (parseFloat(student.balance) || 0) + parseFloat(amount);
+
+      // 1. Update Database
+      const res = await fetch(`${API_BASE}/students/${studentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ balance: newBalance })
+      });
+      
+      if (!res.ok) throw new Error("Failed to update");
+      
+      const updatedStudent = await res.json();
+
+      // 2. Update UI
+      setStudents(prev => prev.map(s => s._id === updatedStudent._id ? updatedStudent : s));
+      setShowTopUpModal(false);
+      alert(`Successfully added ₹${amount} to ${student.name}'s balance.`);
+
+    } catch (err) {
+      alert("Error updating balance");
+      console.error(err);
+    }
   };
 
   // 2. UPDATE STUDENT (DB) - FIX IS HERE
@@ -215,6 +250,7 @@ export default function App() {
 
   // --- RENDER ---
   if (loading) return <div className="h-screen flex items-center justify-center bg-gray-50 text-blue-600"><Loader2 className="animate-spin" size={40} /></div>;
+  
 
   return (
     <div className="min-h-screen pb-20 max-w-md mx-auto bg-gray-50 text-slate-800 font-sans border-x border-gray-200 shadow-2xl relative">
@@ -236,7 +272,7 @@ export default function App() {
 
       {/* CONTENT */}
       <div className="p-6">
-        {view === 'dashboard' && <Dashboard students={students} schedule={schedule} onAction={handleClassAction} onViewPending={() => setView('pending-list')} onOpenEarnings={() => setShowEarningsModal(true)} />}
+        {view === 'dashboard' && <Dashboard students={students} schedule={schedule} onAction={handleClassAction} onViewPending={() => setView('pending-list')} onOpenEarnings={() => setShowEarningsModal(true)} onOpenTopUp={() => setShowTopUpModal(true)}/>}
 
         {view === 'students' && <StudentsManager students={students} onAdd={() => { setEditingStudent(null); setShowStudentForm(true); }} onEdit={(s) => { setEditingStudent(s); setShowStudentForm(true); }} onDelete={deleteStudent} onSelect={(id) => { setSelectedStudentId(id); setView('student-details'); }} />}
 
@@ -245,6 +281,7 @@ export default function App() {
         {view === 'pending-list' && <PendingBreakdown students={students} onSelect={(id) => { setSelectedStudentId(id); setView('student-details'); }} />}
 
         {view === 'student-details' && <StudentDetailView student={students.find(s => s._id === selectedStudentId)} schedule={schedule} onGenerateReport={generateStatement} onClearDues={clearDues} onDelete={deleteStudent} onEdit={(s) => { setEditingStudent(s); setShowStudentForm(true); }} />}
+        
       </div>
 
       {/* BOTTOM NAV */}
@@ -266,47 +303,138 @@ export default function App() {
       )}
       {showInvoiceModal && currentInvoiceData && <InvoiceModal data={currentInvoiceData} onClose={() => setShowInvoiceModal(false)} />}
       {showEarningsModal && <EarningsChartModal students={students} schedule={schedule} onClose={() => setShowEarningsModal(false)} />}
+      {showTopUpModal && (<TopUpModal students={students} onClose={() => setShowTopUpModal(false)} onSave={handleTopUp}/>
+      )}
     </div>
   );
 }
 
 // --- SUB COMPONENTS ---
 
-const Dashboard = ({ students, schedule, onAction, onViewPending, onOpenEarnings }) => {
+const Dashboard = ({ students, schedule, onAction, onViewPending, onOpenEarnings, onOpenTopUp }) => { // 👈 Add prop
   const today = new Date().toISOString().split('T')[0];
 
   const upfrontCollected = students.filter(s => s.type === 'UPFRONT').reduce((acc, s) => acc + (parseFloat(s.initialBalance) || 0), 0);
+  
+  // Calculate current available balance for Upfront students (Total funds holding)
+  const currentUpfrontHoldings = students.filter(s => s.type === 'UPFRONT').reduce((acc, s) => acc + (parseFloat(s.balance) || 0), 0);
+
   const postpaidEarned = schedule.filter(c => c.status === 'COMPLETED').reduce((acc, c) => {
     const s = students.find(st => st._id === c.studentId);
     if (s && s.type === 'POSTPAID') return acc + parseFloat(s.rate);
     return acc;
   }, 0);
+  
   const totalEarnings = upfrontCollected + postpaidEarned;
-
   const pendingAmount = students.filter(s => !s.isArchived && s.type === 'POSTPAID' && s.balance > 0).reduce((acc, s) => acc + parseFloat(s.balance), 0);
   const pendingClasses = schedule.filter(c => c.status === 'PENDING').sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
 
-  return (
+//   return (
+//     <div className="space-y-8">
+//       <section>
+//         <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Financial Stats</h2>
+//         <div onClick={onOpenEarnings} className="bg-slate-900 rounded-xl p-5 text-white shadow-lg mb-4 flex justify-between items-center cursor-pointer hover:bg-slate-800 transition active:scale-[0.98]">
+//           <div>
+//             <p className="text-slate-400 text-xs font-bold uppercase mb-1">Total Lifetime Earnings</p>
+//             <h2 className="text-3xl font-bold">₹{totalEarnings.toLocaleString()}</h2>
+//             <div className="flex items-center gap-1 text-[10px] text-blue-300 mt-2 font-medium bg-slate-800 py-1 px-2 rounded-lg w-fit"><BarChart2 size={12} /> View Monthly Chart</div>
+//           </div>
+//           <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-blue-400"><TrendingUp size={20} /></div>
+//         </div>
+//         <div className="grid grid-cols-2 gap-3">
+//           <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+//             <div className="flex items-center gap-2 mb-2"><div className="w-6 h-6 rounded bg-purple-50 text-purple-600 flex items-center justify-center"><Wallet size={14} /></div><span className="text-[10px] font-bold text-slate-400 uppercase">Upfront</span></div>
+//             <div className="text-lg font-bold text-slate-800">₹{upfrontCollected.toLocaleString()}</div>
+//           </div>
+//           <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+//             <div className="flex items-center gap-2 mb-2"><div className="w-6 h-6 rounded bg-green-50 text-green-600 flex items-center justify-center"><CreditCard size={14} /></div><span className="text-[10px] font-bold text-slate-400 uppercase">Postpaid</span></div>
+//             <div className="text-lg font-bold text-slate-800">₹{postpaidEarned.toLocaleString()}</div>
+//           </div>
+//           <div onClick={onViewPending} className="col-span-2 bg-white p-4 rounded-xl border border-orange-100 shadow-sm flex justify-between items-center cursor-pointer hover:bg-orange-50/30 transition">
+//             <div><span className="text-[10px] font-bold text-slate-400 uppercase">Pending Collection (Active)</span><div className="text-xl font-bold text-orange-600 mt-1">₹{pendingAmount.toLocaleString()}</div></div>
+//             <div className="flex items-center text-orange-400 text-xs font-bold gap-1">View List <ArrowRight size={14} /></div>
+//           </div>
+//         </div>
+//       </section>
+
+//       <section>
+//         <div className="flex items-center gap-2 mb-4"><h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Timeline</h2>{pendingClasses.length > 0 && <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{pendingClasses.length}</span>}</div>
+//         {pendingClasses.length === 0 ? (
+//           <div className="bg-white rounded-xl border border-dashed border-gray-300 p-8 text-center"><div className="inline-block p-3 rounded-full bg-gray-50 mb-3"><Check size={20} className="text-gray-400" /></div><p className="text-slate-500 text-sm font-medium">No pending classes.</p></div>
+//         ) : (
+//           <div className="space-y-3">
+//             {pendingClasses.map(c => {
+//               const s = students.find(st => st._id === c.studentId);
+//               if (!s) return null;
+//               const isToday = c.date === today;
+//               return (
+//                 <div key={c._id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center group">
+//                   <div className="flex items-start gap-3">
+//                     <div className={`w-1 h-10 rounded-full mt-1 ${isToday ? 'bg-blue-500' : 'bg-gray-200'}`}></div>
+//                     <div>
+//                       <div className="font-bold text-slate-800">{s.name} {s.isArchived && <span className="text-[10px] text-red-400">(Archived)</span>}</div>
+//                       <div className="flex items-center gap-2 text-xs text-slate-500 mt-1"><span className={isToday ? 'text-blue-600 font-semibold' : ''}>{isToday ? 'Today' : new Date(c.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span><span>•</span><span>{c.time.includes('M') ? c.time : (parseInt(c.time.split(':')[0]) > 12 ? (parseInt(c.time.split(':')[0]) - 12) + ':' + c.time.split(':')[1] + ' PM' : c.time + ' AM')}</span></div>
+//                     </div>
+//                   </div>
+//                   <div className="flex items-center gap-2 opacity-100 transition-opacity">
+//                     <button onClick={() => onAction(c._id, 'CANCEL')} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><X size={18} /></button>
+//                     <button onClick={() => onAction(c._id, 'COMPLETE')} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"><Check size={18} /></button>
+//                   </div>
+//                 </div>
+//               )
+//             })}
+//           </div>
+//         )}
+//       </section>
+//     </div>
+//   );
+// };
+
+//---------------------------------------------------------
+return (
     <div className="space-y-8">
       <section>
         <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Financial Stats</h2>
+        
+        {/* Total Earnings Card */}
         <div onClick={onOpenEarnings} className="bg-slate-900 rounded-xl p-5 text-white shadow-lg mb-4 flex justify-between items-center cursor-pointer hover:bg-slate-800 transition active:scale-[0.98]">
-          <div>
+           {/* ... same content ... */}
+           <div>
             <p className="text-slate-400 text-xs font-bold uppercase mb-1">Total Lifetime Earnings</p>
             <h2 className="text-3xl font-bold">₹{totalEarnings.toLocaleString()}</h2>
             <div className="flex items-center gap-1 text-[10px] text-blue-300 mt-2 font-medium bg-slate-800 py-1 px-2 rounded-lg w-fit"><BarChart2 size={12} /> View Monthly Chart</div>
           </div>
           <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-blue-400"><TrendingUp size={20} /></div>
         </div>
+
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-            <div className="flex items-center gap-2 mb-2"><div className="w-6 h-6 rounded bg-purple-50 text-purple-600 flex items-center justify-center"><Wallet size={14} /></div><span className="text-[10px] font-bold text-slate-400 uppercase">Upfront</span></div>
-            <div className="text-lg font-bold text-slate-800">₹{upfrontCollected.toLocaleString()}</div>
+          
+          {/* 👇 UPFRONT CARD - NOW CLICKABLE */}
+          <div 
+            onClick={onOpenTopUp} 
+            className="bg-white p-4 rounded-xl border border-purple-100 shadow-sm cursor-pointer hover:bg-purple-50 transition active:scale-[0.98] group relative overflow-hidden"
+          >
+             {/* Small indicator to show it's clickable */}
+             <div className="absolute top-2 right-2 text-purple-200 group-hover:text-purple-500 transition-colors">
+                <Plus size={16} />
+             </div>
+
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 rounded bg-purple-50 text-purple-600 flex items-center justify-center group-hover:bg-white transition-colors">
+                <Wallet size={14} />
+              </div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Upfront Balance</span>
+            </div>
+            {/* Displaying Current Holding Balance instead of initial collected for better context, or keep upfrontCollected if you prefer */}
+            <div className="text-lg font-bold text-slate-800">₹{currentUpfrontHoldings.toLocaleString()}</div>
+            <div className="text-[10px] text-purple-400 mt-1 font-medium">Click to Add Funds</div>
           </div>
+
           <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
             <div className="flex items-center gap-2 mb-2"><div className="w-6 h-6 rounded bg-green-50 text-green-600 flex items-center justify-center"><CreditCard size={14} /></div><span className="text-[10px] font-bold text-slate-400 uppercase">Postpaid</span></div>
             <div className="text-lg font-bold text-slate-800">₹{postpaidEarned.toLocaleString()}</div>
           </div>
+          
           <div onClick={onViewPending} className="col-span-2 bg-white p-4 rounded-xl border border-orange-100 shadow-sm flex justify-between items-center cursor-pointer hover:bg-orange-50/30 transition">
             <div><span className="text-[10px] font-bold text-slate-400 uppercase">Pending Collection (Active)</span><div className="text-xl font-bold text-orange-600 mt-1">₹{pendingAmount.toLocaleString()}</div></div>
             <div className="flex items-center text-orange-400 text-xs font-bold gap-1">View List <ArrowRight size={14} /></div>
@@ -314,6 +442,7 @@ const Dashboard = ({ students, schedule, onAction, onViewPending, onOpenEarnings
         </div>
       </section>
 
+      {/* ... Timeline Section ... */}
       <section>
         <div className="flex items-center gap-2 mb-4"><h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Timeline</h2>{pendingClasses.length > 0 && <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{pendingClasses.length}</span>}</div>
         {pendingClasses.length === 0 ? (
@@ -346,6 +475,14 @@ const Dashboard = ({ students, schedule, onAction, onViewPending, onOpenEarnings
     </div>
   );
 };
+//---------------------------------------------------------
+
+
+
+
+
+
+
 
 const EarningsChartModal = ({ students, schedule, onClose }) => {
   const monthlyData = {};
@@ -823,6 +960,99 @@ const InvoiceModal = ({ data, onClose }) => {
         >
           Download
         </button>
+      </div>
+    </div>
+  );
+};
+
+const TopUpModal = ({ students, onClose, onSave }) => {
+  // Only show students who are UPFRONT type
+  const upfrontStudents = students.filter(s => s.type === 'UPFRONT' && !s.isArchived);
+  const [selectedId, setSelectedId] = useState('');
+  const [amount, setAmount] = useState('');
+
+  const selectedStudent = students.find(s => s._id === selectedId);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (selectedId && amount) {
+      onSave(selectedId, amount);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
+            <Wallet size={20} />
+          </div>
+          <div>
+            <h3 className="font-bold text-lg text-slate-900">Add Funds</h3>
+            <p className="text-xs text-slate-500">Update Upfront Balance</p>
+          </div>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          
+          {/* Student Selector */}
+          <div>
+            <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Select Student</label>
+            <select 
+              value={selectedId} 
+              onChange={(e) => setSelectedId(e.target.value)} 
+              required 
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-purple-500 transition-colors"
+            >
+              <option value="">-- Choose Student --</option>
+              {upfrontStudents.length === 0 && <option disabled>No Upfront Students Found</option>}
+              {upfrontStudents.map(s => (
+                <option key={s._id} value={s._id}>{s.name} (Bal: ₹{s.balance})</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Amount Input */}
+          <div>
+            <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Amount to Add</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+              <input 
+                type="number" 
+                value={amount} 
+                onChange={(e) => setAmount(e.target.value)} 
+                placeholder="0.00" 
+                required 
+                min="1"
+                className="w-full pl-8 p-3 bg-gray-50 border border-gray-200 rounded-xl text-lg font-semibold outline-none focus:border-purple-500 transition-colors" 
+              />
+            </div>
+          </div>
+
+          {/* Preview New Balance */}
+          {selectedStudent && amount && (
+             <div className="bg-purple-50 p-3 rounded-lg flex justify-between items-center text-sm border border-purple-100">
+                <span className="text-purple-700">New Balance:</span>
+                <span className="font-bold text-purple-800">₹{(parseFloat(selectedStudent.balance || 0) + parseFloat(amount)).toLocaleString()}</span>
+             </div>
+          )}
+
+          <div className="flex gap-2 mt-6">
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="flex-1 py-3 text-slate-500 font-semibold text-sm hover:bg-gray-50 rounded-lg transition"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="flex-1 py-3 bg-slate-900 text-white font-semibold rounded-lg shadow-md hover:bg-slate-800 transition"
+            >
+              Add Funds
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
