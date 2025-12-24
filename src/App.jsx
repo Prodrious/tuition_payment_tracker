@@ -829,22 +829,6 @@ const NavBtn = ({ icon, label, active, onClick }) => (
   </button>
 );
 
-// const InvoiceModal = ({ data, onClose }) => {
-//   const ref = useRef(null);
-//   const downloadImage = () => { if (ref.current) toPng(ref.current, { cacheBust: true, backgroundColor: '#ffffff', pixelRatio: 2.5 }).then((dataUrl) => { const link = document.createElement('a'); link.download = `Invoice.png`; link.href = dataUrl; link.click(); }); };
-//   return (
-//     <div className="fixed inset-0 bg-slate-800/50 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4 overflow-y-auto">
-//       <div ref={ref} className="bg-white p-10 w-full max-w-sm shadow-2xl relative">
-//         <div className="flex justify-between items-start mb-8 border-b border-gray-100 pb-6"><div className="text-xl font-bold text-slate-900 flex items-center gap-2"><div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white"><FileText size={14}/></div>INVOICE</div><div className="text-right"><p className="text-xs font-bold text-slate-400 uppercase">Date</p><p className="text-sm font-semibold text-slate-700">{new Date().toLocaleDateString()}</p></div></div>
-//         <div className="mb-8"><p className="text-xs font-bold text-slate-400 uppercase mb-1">Bill To</p><h3 className="font-bold text-lg text-slate-800">{data.studentName}</h3><p className="text-sm text-slate-500">{data.subject}</p></div>
-//         <div className="mb-6"><div className="flex text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-gray-200 pb-2 mb-2"><div className="w-1/3 text-left">Date</div><div className="w-1/3 text-center">Time</div><div className="w-1/3 text-right">Amt</div></div><div className="space-y-2">{data.history.map((item, index) => (<div key={index} className="flex text-sm text-slate-600"><div className="w-1/3 font-medium">{item.date}</div><div className="w-1/3 text-center text-slate-400">{item.time}</div><div className="w-1/3 text-right">₹{data.rate}</div></div>))}</div></div>
-//         <div className="border-t-2 border-slate-800 pt-4 flex justify-between items-end"><div className="text-xs text-slate-400">Total: {data.history.length}</div><div className="text-right"><p className="text-xs font-bold text-slate-400 uppercase">Total Due</p><p className="text-3xl font-bold text-slate-900">₹{data.totalPending.toLocaleString()}</p></div></div>
-//       </div>
-//       <div className="mt-6 flex gap-3 w-full max-w-sm"><button onClick={onClose} className="flex-1 py-3 bg-white text-slate-700 font-semibold rounded-lg shadow-sm">Close</button><button onClick={downloadImage} className="flex-1 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md flex items-center justify-center gap-2"><Share2 size={18} /> Download</button></div>
-//     </div>
-//   );
-// };
-
 
 //< --------- new billing invoice ------- >
 const InvoiceModal = ({ data, onClose }) => {
@@ -961,66 +945,91 @@ const InvoiceModal = ({ data, onClose }) => {
 };
 
 const TopUpModal = ({ students, onClose, onSave }) => {
-  // Filter only active, upfront students
+  // Only show students who are UPFRONT type
   const upfrontStudents = students.filter(s => s.type === 'UPFRONT' && !s.isArchived);
-  
   const [selectedId, setSelectedId] = useState('');
   const [amount, setAmount] = useState('');
 
+  const selectedStudent = students.find(s => s._id === selectedId);
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    // 🛑 PREVENT SUBMISSION IF NO ID
-    if (!selectedId) {
-      alert("Please select a student first");
-      return;
+    if (selectedId && amount) {
+      onSave(selectedId, amount);
     }
-    if (!amount || amount <= 0) {
-      alert("Please enter a valid amount");
-      return;
-    }
-
-    onSave(selectedId, amount);
   };
 
   return (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
-        <h3 className="font-bold text-lg mb-4">Add Funds</h3>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
+            <Wallet size={20} />
+          </div>
+          <div>
+            <h3 className="font-bold text-lg text-slate-900">Add Funds</h3>
+            <p className="text-xs text-slate-500">Update Upfront Balance</p>
+          </div>
+        </div>
+        
         <form onSubmit={handleSubmit} className="space-y-4">
           
-          {/* STUDENT SELECTOR */}
+          {/* Student Selector */}
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Student</label>
+            <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Select Student</label>
             <select 
               value={selectedId} 
               onChange={(e) => setSelectedId(e.target.value)} 
               required 
-              className="w-full p-3 border rounded-xl"
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-purple-500 transition-colors"
             >
-              <option value="">-- Select Student --</option>
+              <option value="">-- Choose Student --</option>
+              {upfrontStudents.length === 0 && <option disabled>No Upfront Students Found</option>}
               {upfrontStudents.map(s => (
-                <option key={s._id} value={s._id}>{s.name}</option>
+                <option key={s._id} value={s._id}>{s.name} (Bal: ₹{s.balance})</option>
               ))}
             </select>
           </div>
 
-          {/* AMOUNT INPUT */}
+          {/* Amount Input */}
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Amount</label>
-            <input 
-              type="number" 
-              value={amount} 
-              onChange={(e) => setAmount(e.target.value)} 
-              placeholder="0" 
-              required 
-              className="w-full p-3 border rounded-xl" 
-            />
+            <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Amount to Add</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+              <input 
+                type="number" 
+                value={amount} 
+                onChange={(e) => setAmount(e.target.value)} 
+                placeholder="0.00" 
+                required 
+                min="1"
+                className="w-full pl-8 p-3 bg-gray-50 border border-gray-200 rounded-xl text-lg font-semibold outline-none focus:border-purple-500 transition-colors" 
+              />
+            </div>
           </div>
 
-          <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="flex-1 py-3 text-slate-500">Cancel</button>
-            <button type="submit" className="flex-1 py-3 bg-blue-600 text-white rounded-lg">Save</button>
+          {/* Preview New Balance */}
+          {selectedStudent && amount && (
+             <div className="bg-purple-50 p-3 rounded-lg flex justify-between items-center text-sm border border-purple-100">
+                <span className="text-purple-700">New Balance:</span>
+                <span className="font-bold text-purple-800">₹{(parseFloat(selectedStudent.balance || 0) + parseFloat(amount)).toLocaleString()}</span>
+             </div>
+          )}
+
+          <div className="flex gap-2 mt-6">
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="flex-1 py-3 text-slate-500 font-semibold text-sm hover:bg-gray-50 rounded-lg transition"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="flex-1 py-3 bg-slate-900 text-white font-semibold rounded-lg shadow-md hover:bg-slate-800 transition"
+            >
+              Add Funds
+            </button>
           </div>
         </form>
       </div>
