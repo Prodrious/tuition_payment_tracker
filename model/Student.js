@@ -9,7 +9,7 @@ const StudentSchema = new mongoose.Schema(
     initialBalance: { type: Number, default: 0 },
     type: { type: String, enum: ['UPFRONT', 'POSTPAID'], required: true },
     isArchived: { type: Boolean, default: false },
-    payments: [{amount: { type: Number, required: true }, date: { type: Date, default: Date() }}],
+    payments: [{amount: { type: Number, required: true }, date: { type: Date, default: Date.now }}],
   },
   { timestamps: true }
 );

@@ -229,7 +229,7 @@ app.put('/api/students/:id/topup', async (req, res) => {
       {
         $inc: { balance: value },
         $push: { 
-          payments: { amount: value, date: new Date() } 
+          payments: { amount: value, date: new Date.now } 
         }
       },
       { new: true }
