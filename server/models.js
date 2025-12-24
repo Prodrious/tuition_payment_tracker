@@ -68,6 +68,12 @@ const StudentSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  payments: [
+    {
+      amount: { type: Number, required: true },
+      date: { type: Date, default: Date.now }
+    }
+  ],
   createdAt: {
     type: Date,
     default: Date.now

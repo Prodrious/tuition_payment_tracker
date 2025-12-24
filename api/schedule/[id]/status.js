@@ -20,21 +20,13 @@ export default async function handler(req, res) {
             if (status === 'COMPLETED' && cls.status !== 'COMPLETED') {
                 const student = await Student.findById(cls.studentId);
                 if (student) {
-                    // const rate = student.rate;
-                    // const balance =
-                    //     student.type === 'UPFRONT'
-                    //         ? student.balance - rate
-                    //         : student.balance + rate;
+                    const rate = student.rate;
+                    const balance =
+                        student.type === 'UPFRONT'
+                            ? student.balance - rate
+                            : student.balance + rate;
 
-                    // await Student.findByIdAndUpdate(student._id, { balance });
-                    const amount = student.rate;
-
-                    await Student.findByIdAndUpdate(student._id, {
-                        $inc: {
-                            balance: student.type === 'UPFRONT' ? -amount : amount
-                        }
-                    });
-
+                    await Student.findByIdAndUpdate(student._id, { balance });
                 }
             }
 
