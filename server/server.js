@@ -228,9 +228,9 @@ app.put('/api/students/:id/topup', async (req, res) => {
       req.params.id,
       {
         $inc: { balance: value },
-        // $push: { 
-        //   payments: { amount: value, date: new Date.now } 
-        // }
+        $push: { 
+          payments: { amount: value, date: new Date.now } 
+        }
       },
       { new: true }
     );

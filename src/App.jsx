@@ -953,11 +953,17 @@ const TopUpModal = ({ students, onClose, onSave }) => {
   const selectedStudent = students.find(s => s._id === selectedId);
 
   const handleSubmit = (e) => {
-    e.preventDefault();
-    if (selectedId && amount) {
-      onSave(selectedId, amount);
-    }
-  };
+  e.preventDefault();
+
+  const numericAmount = Number(amount);
+
+  if (!selectedId || isNaN(numericAmount) || numericAmount <= 0) {
+    return;
+  }
+
+  onSave(selectedId, numericAmount);
+};
+
 
   return (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
